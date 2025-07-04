@@ -14,8 +14,12 @@ from config.config_manager import get_config
 
 def pytest_configure(config: pytest.Config) -> None:
     """Конфигурация pytest - регистрируем кастомные маркеры"""
-    config.addinivalue_line("markers", "smoke: quick smoke tests for basic functionality")
-    config.addinivalue_line("markers", "regression: comprehensive regression test suite")  
+    config.addinivalue_line(
+        "markers", "smoke: quick smoke tests for basic functionality"
+    )
+    config.addinivalue_line(
+        "markers", "regression: comprehensive regression test suite"
+    )
     config.addinivalue_line("markers", "slow: slow running tests (> 30 seconds)")
     config.addinivalue_line("markers", "flaky: potentially unstable tests")
     config.addinivalue_line("markers", "auth: authentication related tests")
@@ -30,7 +34,7 @@ def browser_context_args(browser_context_args: Dict[str, Any]) -> Dict[str, Any]
         "viewport": {"width": 1920, "height": 1080},
         "user_agent": "Mozilla/5.0 (Test Automation Bot)",
         "locale": "en-US",
-        "timezone_id": "America/New_York"
+        "timezone_id": "America/New_York",
     }
 
 
@@ -42,11 +46,11 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list) -> None:
     for item in items:
         # Автоматически добавляем маркер 'ui' для всех тестов
         item.add_marker(pytest.mark.ui)
-        
+
         # Добавляем маркер 'slow' для тестов содержащих 'slow' в названии
         if "slow" in item.name.lower():
             item.add_marker(pytest.mark.slow)
-            
+
         # Добавляем маркер 'auth' для тестов в классе TestAuthentication
         if item.cls and "Authentication" in item.cls.__name__:
             item.add_marker(pytest.mark.auth)
@@ -58,10 +62,10 @@ def pytest_html_results_table_header(cells) -> None:
     cells.insert(2, "<th>Description</th>")
 
 
-@pytest.hookimpl(optionalhook=True) 
+@pytest.hookimpl(optionalhook=True)
 def pytest_html_results_table_row(report, cells) -> None:
     """Кастомизация строк HTML отчета"""
-    cells.insert(2, f"<td>{getattr(report, 'description', '')}</td>") 
+    cells.insert(2, f"<td>{getattr(report, 'description', '')}</td>")
 
 
 def pytest_addoption(parser):
@@ -70,20 +74,20 @@ def pytest_addoption(parser):
         "--remote-browser",
         action="store",
         default=None,
-        help="URL удаленного браузера (например: ws://192.168.195.104:9222)"
+        help="URL удаленного браузера (например: ws://192.168.195.104:9222)",
     )
     parser.addoption(
         "--browser-name",
-        action="store", 
+        action="store",
         default="chromium",
-        help="Имя браузера: chromium, firefox, webkit"
+        help="Имя браузера: chromium, firefox, webkit",
     )
     parser.addoption(
         "--test-mode",
         action="store",
         choices=["local", "remote"],
         default=None,
-        help="Режим тестирования: local или remote"
+        help="Режим тестирования: local или remote",
     )
 
 
@@ -93,29 +97,29 @@ def browser_type_launch_args(pytestconfig):
     # Проверяем командную строку
     remote_url = pytestconfig.getoption("--remote-browser")
     test_mode = pytestconfig.getoption("--test-mode")
-    
+
     # Устанавливаем режим из командной строки если передан
     if test_mode:
-        os.environ['TEST_MODE'] = test_mode
-    
+        os.environ["TEST_MODE"] = test_mode
+
     config = get_config()
-    
+
     # Показываем текущую конфигурацию
     print(f"\n🔧 Test Configuration:")
     print(f"   Mode: {config.get_test_mode()}")
     if config.is_remote_mode():
         print(f"   Remote URL: {config.get_remote_url()}")
-    
+
     if remote_url or config.is_remote_mode():
         # Для удаленного режима возвращаем пустой dict
         # Подключение к удаленному браузеру будет через browser fixture
         return {}
     else:
         # Для локального режима используем стандартные аргументы
-        local_settings = config.config['local_settings']
+        local_settings = config.config["local_settings"]
         return {
-            "headless": local_settings.get('headless', False),
-            "slow_mo": local_settings.get('slow_mo', 100)
+            "headless": local_settings.get("headless", False),
+            "slow_mo": local_settings.get("slow_mo", 100),
         }
 
 
@@ -125,43 +129,47 @@ def browser(browser_type, browser_type_launch_args, pytestconfig):
     # Проверяем командную строку и конфигурацию
     remote_url = pytestconfig.getoption("--remote-browser")
     config = get_config()
-    
+
     if remote_url:
         # Прямое указание URL удаленного браузера
         print(f"   Connecting to remote browser: {remote_url}")
         # Для CDP подключения используем connect_over_cdp
-        if remote_url.startswith('ws://') and '/devtools/' in remote_url:
+        if remote_url.startswith("ws://") and "/devtools/" in remote_url:
             browser = browser_type.connect_over_cdp(remote_url)
         else:
             browser = browser_type.connect(ws_endpoint=remote_url)
     elif config.is_remote_mode():
         # Используем конфигурацию для удаленного подключения
         remote_ws_url = config.get_remote_url()
+        if remote_ws_url is None:
+            raise ValueError("Remote URL is not configured")
         print(f"   Connecting to remote browser: {remote_ws_url}")
         # Для CDP подключения используем connect_over_cdp
-        if remote_ws_url.startswith('ws://') and '/devtools/' in remote_ws_url:
+        if remote_ws_url.startswith("ws://") and "/devtools/" in remote_ws_url:
             browser = browser_type.connect_over_cdp(remote_ws_url)
         else:
             browser = browser_type.connect(ws_endpoint=remote_ws_url)
     else:
         # Локальный режим - стандартный запуск
         browser = browser_type.launch(**browser_type_launch_args)
-    
+
     yield browser
     # Для удаленного браузера не закрываем browser
     if not (remote_url or config.is_remote_mode()):
         browser.close()
 
 
-@pytest.fixture(scope="session") 
+@pytest.fixture(scope="session")
 def context_args():
     """Аргументы для контекста браузера"""
     config = get_config()
     context_args = config.get_context_args()
-    
+
     # Добавляем user agent
-    context_args["user_agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    
+    context_args["user_agent"] = (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    )
+
     return context_args
 
 
@@ -171,4 +179,4 @@ def setup_test_environment():
     # Можно добавить логирование, настройки прокси и т.д.
     print("\n🔧 Setting up test environment...")
     yield
-    print("🧹 Cleaning up test environment...") 
+    print("🧹 Cleaning up test environment...")
