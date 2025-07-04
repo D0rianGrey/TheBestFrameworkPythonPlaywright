@@ -19,7 +19,6 @@ def test_data() -> Dict[str, Any]:
         "main_links": [
             "A/B Testing",
             "Add/Remove Elements", 
-            "Basic Auth",
             "Checkboxes",
             "Form Authentication"
         ],

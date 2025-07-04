@@ -1,0 +1,26 @@
+{
+    "test_mode": "local",
+    "remote_settings": {
+        "enabled": false,
+        "mac_ip": "192.168.195.104",
+        "service_type": "chrome",
+        "port": 9222,
+        "use_proxy": false,
+        "proxy_host": "192.168.224.45",
+        "proxy_port": 3128
+    },
+    "local_settings": {
+        "headless": false,
+        "slow_mo": 100,
+        "browser": "chromium"
+    },
+    "general_settings": {
+        "timeout": 30000,
+        "viewport": {
+            "width": 1920,
+            "height": 1080
+        },
+        "screenshots_on_failure": true,
+        "video_recording": false
+    }
+}
